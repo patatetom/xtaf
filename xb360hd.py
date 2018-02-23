@@ -3,6 +3,7 @@ sectorSize = 0x200
 
 from hashlib import sha1
 from struct import unpack
+from binascii import hexlify
 
 
 class Xbox360HardDrive:
@@ -39,25 +40,24 @@ class Xbox360HardDrive:
 class DirEntry:
     def __init__(self, rawEntry):
         unpacked = unpack('>BB42sIIHHHH4x', rawEntry)
-        self.filenameLength, self.attribute, self.filename, self.firstCluster, self.size, cDate, cTime, mDate, mTime = unpacked
-        self.filename = self.filename.rstrip(b'\xff').decode('ascii')
-        if self.filenameLength != len(self.filename) : raise ValueError
-        self.cDate = self.__convert(cDate, cTime)
-        self.mDate = self.__convert(mDate, mTime)
+        self.filenameLength, self.attribute, filename, self.firstCluster, self.size, cDate, cTime, mDate, mTime = unpacked
+        self.filename = filename[:self.filenameLength].decode('ascii')
+        self.creationDate = self.__convert(cDate, cTime)
+        self.modificationDate = self.__convert(mDate, mTime)
     
     def __repr__(self):
         string  = 'filename: {}, '.format(self.filename)
         string += 'attribute: {}, '.format(self.attribute)
         string += 'size: {}, '.format(self.size)
-        string += 'cdate: {}, '.format(self.cDate)
-        string += 'mdate: {}, '.format(self.mDate)
+        string += 'creation date: {}, '.format(self.creationDate)
+        string += 'modification date: {}, '.format(self.modificationDate)
         string += 'first cluster: {}'.format(self.firstCluster)
         return '({})'.format(string)
     
     def __convert(self, fatDate, fatTime):
     # https://www.snip2code.com/Snippet/263353/Python-functions-to-convert-timestamps-i
         return int(
-            '{}{}{}{}{}{}'.format(
+            '{}{:02d}{:02d}{:02d}{:02d}{:02d}'.format(
                 (1980 + ((fatDate >> 9) & 0x7f)),
                 ((fatDate >> 5) & 0x0f),
                 (fatDate & 0x1f),
@@ -75,27 +75,27 @@ class Fatx:
         
         unpacked = unpack('>4sIII', self.device.read(length = 0x10))
         magic, self.id, sectors, self.rootCluster = unpacked
-        if magic != b'XTAF' : raise TypeError
-        if not sectors : raise ValueError
+        if magic != b'XTAF' : raise TypeError('bad magic ({})'.format(hexlify(magic).decode('ascii')))
+        if not sectors : raise ValueError('no sector allocated')
         
         self.size = size
-        if not self.size : self.size = self.device.size - self.device.defaultOffset
+        if not size : self.size = self.device.size - offset
         
         self.clusterSize = sectors * sectorSize
         self.device.defaultLength = self.clusterSize
         
         self.fatEntry = ((self.size / self.clusterSize) < 0xfff5) and 0x2 or 0x4
         
-        self.fatSize = int(self.size / self.clusterSize * self.fatEntry)
-        if self.fatSize % 0x1000 : self.fatSize += 0x1000 - (self.fatSize % 0x1000)
+        self.fatSize = int(self.size / self.clusterSize * self.fatEntry) + 0x1000
+        if self.fatSize % 0x1000 : self.fatSize -= self.fatSize % 0x1000
         
         data = self.device.read(length = self.fatSize, offset = 0x1000).rstrip(b'\x00' * self.fatEntry)
-        if len(data) % self.fatEntry : raise ValueError
+        if len(data) % self.fatEntry : raise ValueError('wrong file allocation table length ({})'.format(len(data)))
         format = (self.fatEntry == 0x2) and '>H' or '>I'
         self.fat = [unpack(format, data[index:index + self.fatEntry])[0] for index in range(0, len(data), self.fatEntry)]
         
         data = self.device.read(offset = self.fatSize + 0x1000).rstrip(b'\xff' * 0x40)
-        if len(data) % 0x40 : raise ValueError
+        if len(data) % 0x40 : raise ValueError('wrong root directory length ({})'.format(len(data)))
         self.root = [DirEntry(data[index:index + 0x40]) for index in range(0, len(data), 0x40)]
     
     def __repr__(self):
