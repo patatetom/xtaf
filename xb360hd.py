@@ -84,7 +84,7 @@ class Fatx:
         self.clusterSize = sectors * sectorSize
         self.device.defaultLength = self.clusterSize
         
-        self.fatEntry = ((self.size / self.clusterSize) < 0xfff5) and 0x2 or 0x4
+        self.fatEntry = ((self.size / self.clusterSize) < 0xfff0) and 0x2 or 0x4
         
         self.fatSize = int(self.size / self.clusterSize * self.fatEntry) + 0x1000
         if self.fatSize % 0x1000 : self.fatSize -= self.fatSize % 0x1000
