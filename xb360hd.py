@@ -33,8 +33,11 @@ class Xbox360HardDrive:
         self.device.close()
     
     def read(self, length = 0, offset = 0):
-        self.device.seek(self.defaultOffset + offset)
-        return self.device.read(length or self.defaultLength)
+        length = length or self.defaultLength
+        offset = self.defaultOffset + offset
+        print('reading {} bytes at {}'.format(length, hex(offset)))
+        self.device.seek(offset)
+        return self.device.read(length)
 
 
 class DirEntry:
