@@ -75,7 +75,7 @@ class Fatx:
         
         unpacked = unpack('>4sIII', self.device.read(length = 0x10))
         magic, self.id, sectors, self.rootCluster = unpacked
-        if magic != b'XTAF' : raise TypeError('bad magic ({})'.format(hexlify(magic).decode('ascii')))
+        if magic != b'XTAF' : raise ValueError('bad magic (0x{})'.format(hexlify(magic).decode('ascii')))
         if not sectors : raise ValueError('no sector allocated')
         
         self.size = size
