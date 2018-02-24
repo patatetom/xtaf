@@ -102,6 +102,9 @@ class Fatx:
         if len(data) % 0x40 : raise ValueError('wrong root directory length ({})'.format(len(data)))
         self.root = {entry.filename: entry for entry in [DirEntry(data[index:index + 0x40]) for index in range(0, len(data), 0x40)]}
         self.device.defaultOffset -= self.clusterSize
+        
+        entry = self.root.get('name.txt')
+        if entry and entry.size < 25 : self.volumeName = self.device.read(length = entry.size, offset = entry.firstCluster * self.clusterSize).decode('utf-16')
     
     def __repr__(self):
         string  = 'id: {}, '.format(self.id)
@@ -110,4 +113,5 @@ class Fatx:
         string += 'fat entry: {}, '.format(self.fatEntry)
         string += 'fat size: {}, '.format(self.fatSize)
         string += 'root cluster: {}'.format(self.rootCluster)
+        if self.volumeName : string += ', volume name: {}'.format(self.volumeName)
         return '({})'.format(string)
