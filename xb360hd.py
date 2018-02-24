@@ -96,15 +96,15 @@ class Fatx:
         if len(data) % self.fatEntry : raise ValueError('wrong file allocation table length ({})'.format(len(data)))
         format = (self.fatEntry == 0x2) and '>H' or '>I'
         self.fat = [unpack(format, data[index:index + self.fatEntry])[0] for index in range(0, len(data), self.fatEntry)]
-        self.device.defaultOffset = offset + 0x1000 + self.fatSize
         
-        data = self.device.read().rstrip(b'\xff' * 0x40)
+        self.device.defaultOffset = offset + 0x1000 + self.fatSize - self.clusterSize
+        
+        data = self.readCluster(1).rstrip(b'\xff' * 0x40)
         if len(data) % 0x40 : raise ValueError('wrong root directory length ({})'.format(len(data)))
         self.root = {entry.filename: entry for entry in [DirEntry(data[index:index + 0x40]) for index in range(0, len(data), 0x40)]}
-        self.device.defaultOffset -= self.clusterSize
         
         entry = self.root.get('name.txt')
-        if entry and entry.size < 25 : self.volumeName = self.device.read(length = entry.size, offset = entry.firstCluster * self.clusterSize).decode('utf-16')
+        if entry and entry.size < 25 : self.volumeName = self.readCluster(cluster = entry.firstCluster, length = entry.size).decode('utf-16')
     
     def __repr__(self):
         string  = 'id: {}, '.format(self.id)
@@ -115,3 +115,7 @@ class Fatx:
         string += 'root cluster: {}'.format(self.rootCluster)
         if self.volumeName : string += ', volume name: {}'.format(self.volumeName)
         return '({})'.format(string)
+    
+    def readCluster(self, cluster, length = 0):
+        print('{} cluster {}'.format(length and 'reading {} bytes at'.format(length) or 'reading', cluster))
+        return self.device.read(length = length, offset = cluster * self.clusterSize)
