@@ -113,7 +113,7 @@ class Fatx:
         string += 'fat entry: {}, '.format(self.fatEntry)
         string += 'fat size: {}, '.format(self.fatSize)
         string += 'root cluster: {}'.format(self.rootCluster)
-        if self.volumeName : string += ', volume name: {}'.format(self.volumeName)
+        if hasattr(self, 'volumeName') : string += ', volume name: {}'.format(self.volumeName)
         return '({})'.format(string)
     
     def readCluster(self, cluster, length = 0):
