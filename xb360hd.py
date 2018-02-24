@@ -96,7 +96,8 @@ class Fatx:
         
         data = self.device.read(offset = self.fatSize + 0x1000).rstrip(b'\xff' * 0x40)
         if len(data) % 0x40 : raise ValueError('wrong root directory length ({})'.format(len(data)))
-        self.root = [DirEntry(data[index:index + 0x40]) for index in range(0, len(data), 0x40)]
+        root = [DirEntry(data[index:index + 0x40]) for index in range(0, len(data), 0x40)]
+        self.root = {entry.filename: entry for entry in root}
     
     def __repr__(self):
         string  = 'id: {}, '.format(self.id)
