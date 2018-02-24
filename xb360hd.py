@@ -55,7 +55,11 @@ class DirEntry:
     def __init__(self, rawEntry):
         unpacked = unpack('>BB42sIIHHHH4x', rawEntry)
         self.filenameLength, self.attribute, filename, self.firstCluster, self.size, cDate, cTime, mDate, mTime = unpacked
-        self.filename = filename[:self.filenameLength].decode('ascii')
+        if self.filenameLength < 0x2b : self.filename = filename[:self.filenameLength].decode('ascii')
+        else:
+            try : filename = filename.rstrip(b'\xff').decode('ascii')
+            except UnicodeDecodeError: filename = hexlify(filename.rstrip(b'\xff')).decode('ascii')
+            self.filename = '<DELETED:{}>'.format(filename)
         self.creationDate = self.__convert(cDate, cTime)
         self.modificationDate = self.__convert(mDate, mTime)
     
