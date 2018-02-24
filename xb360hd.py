@@ -12,7 +12,7 @@ class Xbox360HardDrive:
         self.defaultOffset = 0
         self.defaultLength = sectorSize
         
-        unpacked = unpack('<20s8s40s20xI', self.read(length = 0x5c, offset = 0x2000))
+        unpacked = unpack('<20s8s40s20xI', self.read(0x2000, 0x5c))
         self.serialNumber, self.firmwareRevision, self.modelNumber, self.sectorsNumber = unpacked
         
         self.serialNumber = self.serialNumber.decode('ascii').strip()
@@ -32,10 +32,10 @@ class Xbox360HardDrive:
     def __del__(self):
         self.device.close()
     
-    def read(self, length = 0, offset = 0):
-        length = length or self.defaultLength
+    def read(self, offset = 0, length = 0):
         offset = self.defaultOffset + offset
-        print('reading {} bytes at {}'.format(length, hex(offset)))
+        length = length or self.defaultLength
+        print('reading {} bytes at offset {}'.format(length, hex(offset)))
         self.device.seek(offset)
         return self.device.read(length)
 
@@ -76,7 +76,7 @@ class Fatx:
         self.device = Xbox360HardDrive(device)
         self.device.defaultOffset = offset
         
-        unpacked = unpack('>4sIII', self.device.read(length = 0x10))
+        unpacked = unpack('>4sIII', self.device.read(0, 0x10))
         magic, self.id, sectors, self.rootCluster = unpacked
         if magic != b'XTAF' : raise ValueError('bad magic (0x{})'.format(hexlify(magic).decode('ascii')))
         if not sectors : raise ValueError('no sector allocated')
@@ -92,7 +92,7 @@ class Fatx:
         self.fatSize = int(self.size / self.clusterSize * self.fatEntry) + 0x1000
         if self.fatSize % 0x1000 : self.fatSize -= self.fatSize % 0x1000
         
-        data = self.device.read(length = self.fatSize, offset = 0x1000).rstrip(b'\x00' * self.fatEntry)
+        data = self.device.read(0x1000, self.fatSize).rstrip(b'\x00' * self.fatEntry)
         if len(data) % self.fatEntry : raise ValueError('wrong file allocation table length ({})'.format(len(data)))
         format = (self.fatEntry == 0x2) and '>H' or '>I'
         self.fat = [unpack(format, data[index:index + self.fatEntry])[0] for index in range(0, len(data), self.fatEntry)]
@@ -118,4 +118,4 @@ class Fatx:
     
     def readCluster(self, cluster, length = 0):
         print('{} cluster {}'.format(length and 'reading {} bytes at'.format(length) or 'reading', cluster))
-        return self.device.read(length = length, offset = cluster * self.clusterSize)
+        return self.device.read(cluster * self.clusterSize, length)
