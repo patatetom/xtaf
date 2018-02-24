@@ -36,7 +36,7 @@ Traceback (most recent call last):
     if magic != b'XTAF' : raise ValueError('bad magic (0x{})'.format(hexlify(magic).decode('ascii')))
 ValueError: bad magic (0x54414645)
 
->>> # open second sysext partition
+>>> # open second sysext partition in verbose mode
 >>> fx = xb360hd.Fatx(dev, 0x118EB0000, 0x8000000, verbose = True)
 reading 92 bytes at offset 0x2000
 reading 16 bytes at offset 0x118eb0000
