@@ -96,8 +96,9 @@ class Fatx:
         if len(data) % self.fatEntry : raise ValueError('wrong file allocation table length ({})'.format(len(data)))
         format = (self.fatEntry == 0x2) and '>H' or '>I'
         self.fat = [unpack(format, data[index:index + self.fatEntry])[0] for index in range(0, len(data), self.fatEntry)]
+        self.device.defaultOffset = offset + 0x1000 + self.fatSize
         
-        data = self.device.read(offset = self.fatSize + 0x1000).rstrip(b'\xff' * 0x40)
+        data = self.device.read().rstrip(b'\xff' * 0x40)
         if len(data) % 0x40 : raise ValueError('wrong root directory length ({})'.format(len(data)))
         root = [DirEntry(data[index:index + 0x40]) for index in range(0, len(data), 0x40)]
         self.root = {entry.filename: entry for entry in root}
