@@ -7,7 +7,8 @@ from binascii import hexlify
 
 
 class Xbox360HardDrive:
-    def __init__(self, device):
+    def __init__(self, device, verbose = False):
+        self.verbose = verbose
         self.device = open(device, 'rb')
         self.defaultOffset = 0
         self.defaultLength = sectorSize
@@ -35,7 +36,7 @@ class Xbox360HardDrive:
     def read(self, offset = 0, length = 0):
         offset = self.defaultOffset + offset
         length = length or self.defaultLength
-        print('reading {} bytes at offset {}'.format(length, hex(offset)))
+        if self.verbose: print('reading {} bytes at offset {}'.format(length, hex(offset)))
         self.device.seek(offset)
         return self.device.read(length)
 
@@ -72,8 +73,9 @@ class DirEntry:
 
 
 class Fatx:
-    def __init__(self, device, offset = 0x130eb0000, size = 0):
-        self.device = Xbox360HardDrive(device)
+    def __init__(self, device, offset = 0x130eb0000, size = 0, verbose = False):
+        self.verbose = verbose
+        self.device = Xbox360HardDrive(device, verbose)
         self.device.defaultOffset = offset
         
         unpacked = unpack('>4sIII', self.device.read(0, 0x10))
@@ -117,5 +119,5 @@ class Fatx:
         return '({})'.format(string)
     
     def readCluster(self, cluster, length = 0):
-        print('{} cluster {}'.format(length and 'reading {} bytes at'.format(length) or 'reading', cluster))
+        if self.verbose: print('{} cluster {}'.format(length and 'reading {} bytes at'.format(length) or 'reading', cluster))
         return self.device.read(cluster * self.clusterSize, length)
