@@ -7,6 +7,16 @@ from binascii import hexlify
 
 
 class Xbox360HardDrive:
+    """
+    Offset        Length          Information                     Format
+    0x2000        0x204-0x80000   Security Sector                 Binary
+    0x80000       0x80000000      System Cache                    SFCX (Secure File Cache for Xbox)
+    0x80080000    0xa0e30000      Game Cache                      SFCX (Secure File Cache for Xbox)
+    0x10c080000   0xce30000       SysExt                          FATX ("Sub"-Partition)
+    0x118eb0000   0x8000000       SysExt2                         FATX ("Sub"-Partition)
+    0x120eb0000   0x10000000      Xbox 1 Backwards Compatibility  FATX
+    0x130eb0000   end of drive    Data                            FATX
+    """
     def __init__(self, device, verbose = False):
         self.verbose = verbose
         self.device = open(device, 'rb')
