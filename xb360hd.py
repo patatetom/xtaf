@@ -1,7 +1,6 @@
 sectorSize = 0x200
 
 
-from hashlib import sha1
 from struct import unpack
 from binascii import hexlify
 
