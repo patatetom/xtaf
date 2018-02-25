@@ -73,13 +73,12 @@ class DirEntry:
         return '({})'.format(string)
     
     def __convert(self, fatDate, fatTime):
-    # https://www.snip2code.com/Snippet/263353/Python-functions-to-convert-timestamps-i
         return int(
             '{}{:02d}{:02d}{:02d}{:02d}{:02d}'.format(
-                (1980 + ((fatDate >> 9) & 0x7f)),
+                (1980 + (fatDate >> 9)),
                 ((fatDate >> 5) & 0x0f),
                 (fatDate & 0x1f),
-                ((fatTime >> 11) & 0x1f),
+                (fatTime >> 11),
                 ((fatTime >> 5) & 0x3f),
                 ((fatTime & 0x1f) * 2)
             )
