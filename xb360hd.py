@@ -123,7 +123,7 @@ class Fatx:
         self.root = {entry.filename: entry for entry in [DirEntry(data[index:index + 0x40]) for index in range(0, len(data), 0x40)]}
         
         entry = self.root.get('name.txt')
-        if entry and entry.size < 25 : self.volumeName = self.readCluster(cluster = entry.firstCluster, length = entry.size).decode('utf-16')
+        if entry and entry.size < 25 : self.volumeName = self.readCluster(entry.firstCluster, entry.size).decode('utf-16')
     
     def __repr__(self):
         string  = 'id: {}, '.format(self.id)
