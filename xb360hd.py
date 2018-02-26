@@ -47,9 +47,7 @@ class Xbox360HardDrive:
     def read(self, offset = 0, length = 0):
         offset = self.defaultOffset + offset
         length = length or self.defaultLength
-        
         if self.verbose : print('reading {} bytes at offset {}'.format(length, hex(offset)))
-        
         self.device.seek(offset)
         return self.device.read(length)
 
@@ -108,17 +106,17 @@ class Fatx:
         self.clusterSize = sectors * sectorSize
         self.device.defaultLength = self.clusterSize
         
-        self.fatEntry = ((self.size / self.clusterSize) < 0xfff0) and 0x2 or 0x4
+        self.tableEntry = ((self.size / self.clusterSize) < 0xfff0) and 0x2 or 0x4
         
-        self.fatSize = int(self.size / self.clusterSize * self.fatEntry) + 0x1000
-        if self.fatSize % 0x1000 : self.fatSize -= self.fatSize % 0x1000
+        self.tableSize = int(self.size / self.clusterSize * self.tableEntry) + 0x1000
+        if self.tableSize % 0x1000 : self.tableSize -= self.tableSize % 0x1000
         
-        data = self.device.read(0x1000, self.fatSize).rstrip(b'\x00' * self.fatEntry)
-        if len(data) % self.fatEntry : raise ValueError('wrong file allocation table length ({})'.format(len(data)))
-        format = (self.fatEntry == 0x2) and '>H' or '>I'
-        self.fat = [unpack(format, data[index:index + self.fatEntry])[0] for index in range(0, len(data), self.fatEntry)]
+        data = self.device.read(0x1000, self.tableSize).rstrip(b'\x00' * self.tableEntry)
+        if len(data) % self.tableEntry : raise ValueError('wrong file allocation table length ({})'.format(len(data)))
+        format = (self.tableEntry == 0x2) and '>H' or '>I'
+        self.table = [unpack(format, data[index:index + self.tableEntry])[0] for index in range(0, len(data), self.tableEntry)]
         
-        self.device.defaultOffset = offset + 0x1000 + self.fatSize - self.clusterSize
+        self.device.defaultOffset = offset + 0x1000 + self.tableSize - self.clusterSize
         
         data = self.readCluster(1).rstrip(b'\xff' * 0x40)
         if len(data) % 0x40 : raise ValueError('wrong root directory length ({})'.format(len(data)))
@@ -131,8 +129,8 @@ class Fatx:
         string  = 'id: {}, '.format(self.id)
         string += 'size: {}, '.format(self.size)
         string += 'cluster size: {}, '.format(self.clusterSize)
-        string += 'fat entry: {}, '.format(self.fatEntry)
-        string += 'fat size: {}, '.format(self.fatSize)
+        string += 'table entry: {}, '.format(self.tableEntry)
+        string += 'table size: {}, '.format(self.tableSize)
         string += 'root cluster: {}'.format(self.rootCluster)
         if hasattr(self, 'volumeName') : string += ', volume name: {}'.format(self.volumeName)
         return '({})'.format(string)
