@@ -1,8 +1,11 @@
 sectorSize = 0x200
 
 
+from os import path
 from struct import unpack
 from binascii import hexlify
+
+path.sep = '/'
 
 
 class Xbox360HardDrive:
@@ -52,7 +55,7 @@ class Xbox360HardDrive:
         return self.device.read(length)
 
 
-class DirEntry:
+class DirectoryEntry:
     def __init__(self, rawEntry):
         unpacked = unpack('>BB42sIIHHHH4x', rawEntry)
         self.filenameLength, self.attribute, filename, self.firstCluster, self.size, cDate, cTime, mDate, mTime = unpacked
@@ -60,7 +63,7 @@ class DirEntry:
         if self.filenameLength < 0x2b : self.filename = filename[:self.filenameLength].decode('ascii')
         else:
             try : filename = filename.rstrip(b'\xff').decode('ascii')
-            except UnicodeDecodeError: filename = hexlify(filename.rstrip(b'\xff')).decode('ascii')
+            except UnicodeDecodeError : filename = hexlify(filename.rstrip(b'\xff')).decode('ascii')
             self.filename = '<DELETED:{}>'.format(filename)
         
         self.creationDate = self.__convert(cDate, cTime)
@@ -118,9 +121,7 @@ class Fatx:
         
         self.device.defaultOffset = offset + 0x1000 + self.tableSize - self.clusterSize
         
-        data = self.readCluster(1).rstrip(b'\xff' * 0x40)
-        if len(data) % 0x40 : raise ValueError('wrong root directory length ({})'.format(len(data)))
-        self.root = {entry.filename: entry for entry in [DirEntry(data[index:index + 0x40]) for index in range(0, len(data), 0x40)]}
+        self.root = self.readDirectoryEntries(1)
         
         entry = self.root.get('name.txt')
         if entry and entry.size < 25 : self.volumeName = self.readCluster(entry.firstCluster, entry.size).decode('utf-16')
@@ -138,3 +139,35 @@ class Fatx:
     def readCluster(self, cluster, length = 0):
         if self.verbose : print('{} cluster {}'.format(length and 'reading {} bytes at'.format(length) or 'reading', cluster))
         return self.device.read(cluster * self.clusterSize, length)
+    
+    def readDirectoryEntries(self, cluster):
+        # TODO : more than one cluster
+        if cluster < 1 : raise ValueError('unauthorized value ({}) for cluster'.format(cluster))
+        # if cluster < 1 or cluster > self.maxCluster : raise ValueError('wrong cluster ({})'.format(cluster))
+        data = self.readCluster(cluster).rstrip(b'\xff' * 0x40)
+        if len(data) % 0x40 : raise ValueError('wrong directory entries length ({})'.format(len(data)))
+        return {entry.filename: entry for entry in [DirectoryEntry(data[index:index + 0x40]) for index in range(0, len(data), 0x40)]}
+    
+    def readPathEntries(self, pathname):
+        if not pathname.startswith('/') : raise ValueError('pathname must start with /')
+        pathname = path.abspath(pathname).rstrip('/').lstrip('/')
+        if self.verbose : print('read entries for {}'.format(pathname or '/'))
+        if not pathname : return self.root
+        entries = self.root
+        for directory in pathname.split(path.sep):
+            try : entry = entries[directory]
+            except KeyError : raise KeyError('directory {} not found'.format(directory))
+            if not entry.attribute & 0x10 : raise ValueError('{} is not a directory'.format(directory))
+            entries = self.readDirectoryEntries(entry.firstCluster)
+        return entries
+    
+    def readFileEntry(self, filename):
+        if not filename.startswith('/') : raise ValueError('filename must start with /')
+        if self.verbose : print('read entry for {}'.format(filename))
+        pathname, filename = path.split(path.abspath(filename))
+        entries = self.readPathEntries(pathname)
+        if self.verbose : print('read entry for {}'.format(filename))
+        try : entry = entries[filename]
+        except KeyError : raise KeyError('file {} not found'.format(filename))
+        if entry.attribute & 0x10 : raise ValueError('{} is a directory'.format(filename))
+        return entry
