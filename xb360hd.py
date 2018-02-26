@@ -19,24 +19,26 @@ class Xbox360HardDrive:
     def __init__(self, device, verbose = False):
         self.verbose = verbose
         self.device = open(device, 'rb')
+        self.size = self.device.seek(0, 2)
+        
         self.defaultOffset = 0
         self.defaultLength = sectorSize
         
-        unpacked = unpack('<20s8s40s20xI', self.read(0x2000, 0x5c))
-        self.serialNumber, self.firmwareRevision, self.modelNumber, self.sectorsNumber = unpacked
-        
-        self.serialNumber = self.serialNumber.decode('ascii').strip()
-        self.firmwareRevision = self.firmwareRevision.decode('ascii').strip()
-        self.modelNumber = self.modelNumber.decode('ascii').strip()
-        self.size = self.sectorsNumber * sectorSize
+        if self.read(0x2204, 0x8) == b'\x89PNG\r\n\x1a\n' :
+            unpacked = unpack('<20s8s40s20xI', self.read(0x2000, 0x5c))
+            self.serialNumber, self.firmwareRevision, self.modelNumber, sectorsNumber = unpacked
+            
+            self.serialNumber = self.serialNumber.decode('ascii').strip()
+            self.firmwareRevision = self.firmwareRevision.decode('ascii').strip()
+            self.modelNumber = self.modelNumber.decode('ascii').strip()
+            self.size = sectorsNumber * sectorSize
     
     def __repr__(self):
-        string  = 'device name: {}, '.format(self.device.name)
-        string += 'serial number: {}, '.format(self.serialNumber)
-        string += 'firmware revision: {}, '.format(self.firmwareRevision)
-        string += 'model number: {}, '.format(self.modelNumber)
-        string += 'number of sectors: {}, '.format(self.sectorsNumber)
-        string += 'logical size: {}'.format(self.size)
+        string  = 'name: {}, '.format(self.device.name)
+        if hasattr(self, 'serialNumber') : string += 'serial number: {}, '.format(self.serialNumber)
+        if hasattr(self, 'firmwareRevision') : string += 'firmware revision: {}, '.format(self.firmwareRevision)
+        if hasattr(self, 'modelNumber') : string += 'model number: {}, '.format(self.modelNumber)
+        string += 'size: {}'.format(self.size)
         return '({})'.format(string)
     
     def __del__(self):
@@ -45,7 +47,9 @@ class Xbox360HardDrive:
     def read(self, offset = 0, length = 0):
         offset = self.defaultOffset + offset
         length = length or self.defaultLength
-        if self.verbose: print('reading {} bytes at offset {}'.format(length, hex(offset)))
+        
+        if self.verbose : print('reading {} bytes at offset {}'.format(length, hex(offset)))
+        
         self.device.seek(offset)
         return self.device.read(length)
 
@@ -54,11 +58,13 @@ class DirEntry:
     def __init__(self, rawEntry):
         unpacked = unpack('>BB42sIIHHHH4x', rawEntry)
         self.filenameLength, self.attribute, filename, self.firstCluster, self.size, cDate, cTime, mDate, mTime = unpacked
+        
         if self.filenameLength < 0x2b : self.filename = filename[:self.filenameLength].decode('ascii')
         else:
             try : filename = filename.rstrip(b'\xff').decode('ascii')
             except UnicodeDecodeError: filename = hexlify(filename.rstrip(b'\xff')).decode('ascii')
             self.filename = '<DELETED:{}>'.format(filename)
+        
         self.creationDate = self.__convert(cDate, cTime)
         self.modificationDate = self.__convert(mDate, mTime)
     
@@ -92,6 +98,7 @@ class Fatx:
         
         unpacked = unpack('>4sIII', self.device.read(0, 0x10))
         magic, self.id, sectors, self.rootCluster = unpacked
+        
         if magic != b'XTAF' : raise ValueError('bad magic (0x{})'.format(hexlify(magic).decode('ascii')))
         if not sectors : raise ValueError('no sector allocated')
         
@@ -131,5 +138,5 @@ class Fatx:
         return '({})'.format(string)
     
     def readCluster(self, cluster, length = 0):
-        if self.verbose: print('{} cluster {}'.format(length and 'reading {} bytes at'.format(length) or 'reading', cluster))
+        if self.verbose : print('{} cluster {}'.format(length and 'reading {} bytes at'.format(length) or 'reading', cluster))
         return self.device.read(cluster * self.clusterSize, length)
