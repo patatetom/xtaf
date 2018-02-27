@@ -180,3 +180,10 @@ class Fatx:
     
     def getFiles(self, directoryEntries):
         return {fileName: entry for fileName, entry in directoryEntries.items() if not self.isDirectory(entry)}
+    
+    def readFile(self, fileEntry):
+        if self.isDirectory(fileEntry) : raise ValueError('{} is a directory'.format(fileEntry.fileName))
+        size, cluster = fileEntry.size, fileEntry.firstCluster
+        if size == 0 : return b''
+        if size <= self.clusterSize : return self.readCluster(cluster, size)
+        return b'TODO!'
