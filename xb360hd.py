@@ -22,7 +22,6 @@ class Xbox360HardDrive:
     def __init__(self, device, verbose = False):
         self.verbose = verbose
         self.device = open(device, 'rb')
-        self.size = self.device.seek(0, 2)
         
         self.defaultOffset = 0
         self.defaultLength = sectorSize
@@ -35,6 +34,7 @@ class Xbox360HardDrive:
             self.firmwareRevision = self.firmwareRevision.decode('ascii').strip()
             self.modelNumber = self.modelNumber.decode('ascii').strip()
             self.size = sectorsNumber * sectorSize
+        else : self.size = self.device.seek(0, 2)
     
     def __repr__(self):
         string  = 'name: {}, '.format(self.device.name)
@@ -119,9 +119,9 @@ class Fatx:
         format = (self.tableEntry == 0x2) and '>H' or '>I'
         self.table = [unpack(format, data[index:index + self.tableEntry])[0] for index in range(0, len(data), self.tableEntry)]
         
-        self.device.defaultOffset = offset + 0x1000 + self.tableSize
+        self.device.defaultOffset = offset + 0x1000 + self.tableSize - self.clusterSize
         
-        self.root = self.getDirectoryEntries(0)
+        self.root = self.getDirectoryEntries(1)
         
         entry = self.root.get('name.txt')
         if entry and entry.size < 25 : self.volumeName = self.readCluster(entry.firstCluster, entry.size).decode('utf-16')
@@ -142,7 +142,7 @@ class Fatx:
     
     def getDirectoryEntries(self, cluster):
         # TODO : can be more than one cluster
-        if cluster < 0 or cluster > self.tableSize : raise ValueError('unauthorized value ({}) for cluster'.format(cluster))
+        if cluster < 1 or cluster > self.tableSize : raise ValueError('unauthorized value ({}) for cluster'.format(cluster))
         data = self.readCluster(cluster).rstrip(b'\xff' * 0x40)
         if len(data) % 0x40 : raise ValueError('wrong directory entries length ({})'.format(len(data)))
         return {entry.fileName: entry for entry in [DirectoryEntry(data[index:index + 0x40]) for index in range(0, len(data), 0x40)]}
