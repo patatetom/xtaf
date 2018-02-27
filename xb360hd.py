@@ -58,19 +58,19 @@ class Xbox360HardDrive:
 class DirectoryEntry:
     def __init__(self, rawEntry):
         unpacked = unpack('>BB42sIIHHHH4x', rawEntry)
-        self.filenameLength, self.attribute, filename, self.firstCluster, self.size, cDate, cTime, mDate, mTime = unpacked
+        self.fileNameLength, self.attribute, fileName, self.firstCluster, self.size, cDate, cTime, mDate, mTime = unpacked
         
-        if self.filenameLength < 0x2b : self.filename = filename[:self.filenameLength].decode('ascii')
+        if self.fileNameLength < 0x2b : self.fileName = fileName[:self.fileNameLength].decode('ascii')
         else:
-            try : filename = filename.rstrip(b'\xff').decode('ascii')
-            except UnicodeDecodeError : filename = hexlify(filename.rstrip(b'\xff')).decode('ascii')
-            self.filename = '<DELETED:{}>'.format(filename)
+            try : fileName = fileName.rstrip(b'\xff').decode('ascii')
+            except UnicodeDecodeError : fileName = hexlify(fileName.rstrip(b'\xff')).decode('ascii')
+            self.fileName = '<DELETED:{}>'.format(fileName)
         
         self.creationDate = self.__convert(cDate, cTime)
         self.modificationDate = self.__convert(mDate, mTime)
     
     def __repr__(self):
-        string  = 'filename: {}, '.format(self.filename)
+        string  = 'file name: {}, '.format(self.fileName)
         string += 'attribute: {}, '.format(self.attribute)
         string += 'size: {}, '.format(self.size)
         string += 'creation date: {}, '.format(self.creationDate)
@@ -145,38 +145,38 @@ class Fatx:
         if cluster < 0 or cluster > self.tableSize : raise ValueError('unauthorized value ({}) for cluster'.format(cluster))
         data = self.readCluster(cluster).rstrip(b'\xff' * 0x40)
         if len(data) % 0x40 : raise ValueError('wrong directory entries length ({})'.format(len(data)))
-        return {entry.filename: entry for entry in [DirectoryEntry(data[index:index + 0x40]) for index in range(0, len(data), 0x40)]}
+        return {entry.fileName: entry for entry in [DirectoryEntry(data[index:index + 0x40]) for index in range(0, len(data), 0x40)]}
     
     def isDirectory(self, entry):
         return entry.attribute & 0x10
     
-    def readPathEntries(self, pathname):
-        if not pathname.startswith('/') : raise ValueError('pathname must start with /')
-        pathname = path.abspath(pathname).rstrip('/').lstrip('/')
-        if self.verbose : print('read entries for {}'.format(pathname or '/'))
-        if not pathname : return self.root
+    def readPathEntries(self, pathName):
+        if not pathName.startswith('/') : raise ValueError('path name must start with /')
+        pathName = path.abspath(pathName).rstrip('/').lstrip('/')
+        if self.verbose : print('read entries for {}'.format(pathName or '/'))
+        if not pathName : return self.root
         # TODO : could be recursive
-        entries = self.root
-        for directory in pathname.split(path.sep):
-            try : entry = entries[directory]
+        directoryEntries = self.root
+        for directory in pathName.split(path.sep):
+            try : entry = directoryEntries[directory]
             except KeyError : raise KeyError('directory {} not found'.format(directory))
             if not self.isDirectory(entry) : raise ValueError('{} is not a directory'.format(directory))
-            entries = self.readDirectoryEntries(entry.firstCluster)
-        return entries
+            directoryEntries = self.readDirectoryEntries(entry.firstCluster)
+        return directoryEntries
     
-    def readFileEntry(self, filename):
-        if not filename.startswith('/') : raise ValueError('filename must start with /')
-        if self.verbose : print('read entry for {}'.format(filename))
-        pathname, filename = path.split(path.abspath(filename))
-        entries = self.readPathEntries(pathname)
-        if self.verbose : print('read entry for {}'.format(filename))
-        try : entry = entries[filename]
-        except KeyError : raise KeyError('file {} not found'.format(filename))
-        if self.isDirectory(entry) : raise ValueError('{} is a directory'.format(filename))
-        return entry
+    def readFileEntry(self, fileName):
+        if not fileName.startswith('/') : raise ValueError('file name must start with /')
+        if self.verbose : print('read entry for {}'.format(fileName))
+        pathName, fileName = path.split(path.abspath(fileName))
+        directoryEntries = self.readPathEntries(pathName)
+        if self.verbose : print('read entry for {}'.format(fileName))
+        try : fileEntry = directoryEntries[fileName]
+        except KeyError : raise KeyError('file {} not found'.format(fileName))
+        if self.isDirectory(fileEntry) : raise ValueError('{} is a directory'.format(fileName))
+        return fileEntry
     
     def getDirectories(self, directoryEntries):
-        return {filename: entry for filename, entry in directoryEntries.items() if self.isDirectory(entry)}
+        return {fileName: entry for fileName, entry in directoryEntries.items() if self.isDirectory(entry)}
     
     def getFiles(self, directoryEntries):
-        return {filename: entry for filename, entry in directoryEntries.items() if not self.isDirectory(entry)}
+        return {fileName: entry for fileName, entry in directoryEntries.items() if not self.isDirectory(entry)}
