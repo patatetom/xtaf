@@ -121,7 +121,7 @@ class Fatx:
         
         self.device.defaultOffset = offset + 0x1000 + self.tableSize
         
-        self.root = self.readDirectoryEntries(0)
+        self.root = self.getDirectoryEntries(0)
         
         entry = self.root.get('name.txt')
         if entry and entry.size < 25 : self.volumeName = self.readCluster(entry.firstCluster, entry.size).decode('utf-16')
@@ -140,7 +140,7 @@ class Fatx:
         if self.verbose : print('{} cluster {}'.format(length and 'reading {} bytes at'.format(length) or 'reading', cluster))
         return self.device.read(cluster * self.clusterSize, length)
     
-    def readDirectoryEntries(self, cluster):
+    def getDirectoryEntries(self, cluster):
         # TODO : can be more than one cluster
         if cluster < 0 or cluster > self.tableSize : raise ValueError('unauthorized value ({}) for cluster'.format(cluster))
         data = self.readCluster(cluster).rstrip(b'\xff' * 0x40)
@@ -150,10 +150,10 @@ class Fatx:
     def isDirectory(self, entry):
         return entry.attribute & 0x10
     
-    def readPathEntries(self, pathName):
+    def getPathEntries(self, pathName):
         if not pathName.startswith('/') : raise ValueError('path name must start with /')
         pathName = path.abspath(pathName).rstrip('/').lstrip('/')
-        if self.verbose : print('read entries for {}'.format(pathName or '/'))
+        if self.verbose : print('get entries for {}'.format(pathName or '/'))
         if not pathName : return self.root
         # TODO : could be recursive
         directoryEntries = self.root
@@ -161,15 +161,15 @@ class Fatx:
             try : entry = directoryEntries[directory]
             except KeyError : raise KeyError('directory {} not found'.format(directory))
             if not self.isDirectory(entry) : raise ValueError('{} is not a directory'.format(directory))
-            directoryEntries = self.readDirectoryEntries(entry.firstCluster)
+            directoryEntries = self.getDirectoryEntries(entry.firstCluster)
         return directoryEntries
     
-    def readFileEntry(self, fileName):
+    def getFileEntry(self, fileName):
         if not fileName.startswith('/') : raise ValueError('file name must start with /')
-        if self.verbose : print('read entry for {}'.format(fileName))
+        if self.verbose : print('get entry for {}'.format(fileName))
         pathName, fileName = path.split(path.abspath(fileName))
-        directoryEntries = self.readPathEntries(pathName)
-        if self.verbose : print('read entry for {}'.format(fileName))
+        directoryEntries = self.getPathEntries(pathName)
+        if self.verbose : print('get entry for {}'.format(fileName))
         try : fileEntry = directoryEntries[fileName]
         except KeyError : raise KeyError('file {} not found'.format(fileName))
         if self.isDirectory(fileEntry) : raise ValueError('{} is a directory'.format(fileName))
