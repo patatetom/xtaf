@@ -119,9 +119,9 @@ class Fatx:
         format = (self.tableEntry == 0x2) and '>H' or '>I'
         self.table = [unpack(format, data[index:index + self.tableEntry])[0] for index in range(0, len(data), self.tableEntry)]
         
-        self.device.defaultOffset = offset + 0x1000 + self.tableSize - self.clusterSize
+        self.device.defaultOffset = offset + 0x1000 + self.tableSize
         
-        self.root = self.readDirectoryEntries(1)
+        self.root = self.readDirectoryEntries(0)
         
         entry = self.root.get('name.txt')
         if entry and entry.size < 25 : self.volumeName = self.readCluster(entry.firstCluster, entry.size).decode('utf-16')
@@ -141,23 +141,26 @@ class Fatx:
         return self.device.read(cluster * self.clusterSize, length)
     
     def readDirectoryEntries(self, cluster):
-        # TODO : more than one cluster
-        if cluster < 1 : raise ValueError('unauthorized value ({}) for cluster'.format(cluster))
-        # if cluster < 1 or cluster > self.maxCluster : raise ValueError('wrong cluster ({})'.format(cluster))
+        # TODO : can be more than one cluster
+        if cluster < 0 or cluster > self.tableSize : raise ValueError('unauthorized value ({}) for cluster'.format(cluster))
         data = self.readCluster(cluster).rstrip(b'\xff' * 0x40)
         if len(data) % 0x40 : raise ValueError('wrong directory entries length ({})'.format(len(data)))
         return {entry.filename: entry for entry in [DirectoryEntry(data[index:index + 0x40]) for index in range(0, len(data), 0x40)]}
+    
+    def isDirectory(self, entry):
+        return entry.attribute & 0x10
     
     def readPathEntries(self, pathname):
         if not pathname.startswith('/') : raise ValueError('pathname must start with /')
         pathname = path.abspath(pathname).rstrip('/').lstrip('/')
         if self.verbose : print('read entries for {}'.format(pathname or '/'))
         if not pathname : return self.root
+        # TODO : could be recursive
         entries = self.root
         for directory in pathname.split(path.sep):
             try : entry = entries[directory]
             except KeyError : raise KeyError('directory {} not found'.format(directory))
-            if not entry.attribute & 0x10 : raise ValueError('{} is not a directory'.format(directory))
+            if not self.isDirectory(entry) : raise ValueError('{} is not a directory'.format(directory))
             entries = self.readDirectoryEntries(entry.firstCluster)
         return entries
     
@@ -169,5 +172,11 @@ class Fatx:
         if self.verbose : print('read entry for {}'.format(filename))
         try : entry = entries[filename]
         except KeyError : raise KeyError('file {} not found'.format(filename))
-        if entry.attribute & 0x10 : raise ValueError('{} is a directory'.format(filename))
+        if self.isDirectory(entry) : raise ValueError('{} is a directory'.format(filename))
         return entry
+    
+    def getDirectories(self, directoryEntries):
+        return {filename: entry for filename, entry in directoryEntries.items() if self.isDirectory(entry)}
+    
+    def getFiles(self, directoryEntries):
+        return {filename: entry for filename, entry in directoryEntries.items() if not self.isDirectory(entry)}
