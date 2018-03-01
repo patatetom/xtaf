@@ -94,6 +94,7 @@ class DirectoryEntry:
 
 class RootEntry:
     def __init__(self):
+        self.fileName = '/'
         self.attribute = 0x10
         self.firstCluster = 1
 
@@ -149,11 +150,17 @@ class Xtaf:
         return self.device.read(cluster * self.clusterSize, length)
     
     def getDirectoryEntries(self, directoryEntry):
+        if self.verbose : print('get directory entries for {}'.format(directoryEntry.fileName))
         if not self.isDirectory(directoryEntry) : raise ValueError('{} is not a directory'.format(directoryEntry.fileName))
-        # TODO : can be more than one cluster
-        data = self.readCluster(directoryEntry.firstCluster).rstrip(b'\xff' * 0x40)
+        return self.__getDirectoryEntries(directoryEntry.firstCluster)
+    
+    def __getDirectoryEntries(self, cluster):
+        if cluster > self.tableSize : return {}
+        data = self.readCluster(cluster).rstrip(b'\xff' * 0x40)
         if len(data) % 0x40 : raise ValueError('wrong directory entries length ({})'.format(len(data)))
-        return {entry.fileName: entry for entry in [DirectoryEntry(data[index:index + 0x40]) for index in range(0, len(data), 0x40)]}
+        directoryEntries = {entry.fileName: entry for entry in [DirectoryEntry(data[index:index + 0x40]) for index in range(0, len(data), 0x40)]}
+        directoryEntries.update(self.__getDirectoryEntries(self.table[cluster]))
+        return directoryEntries
     
     def isDirectory(self, entry):
         return entry.attribute & 0x10
