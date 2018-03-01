@@ -67,7 +67,7 @@ class DirectoryEntry:
             try : fileName = fileName.rstrip(b'\xff').decode('ascii')
             except UnicodeDecodeError : fileName = hexlify(fileName.rstrip(b'\xff')).decode('ascii')
             self.fileName = '<DELETED:{}>'.format(fileName)
-            #self.size = 0
+            self.size = 0
         
         self.creationDate = self.__convert(cDate, cTime)
         self.modificationDate = self.__convert(mDate, mTime)
