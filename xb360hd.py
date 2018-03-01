@@ -98,13 +98,6 @@ class DirectoryEntry:
         )
 
 
-class RootEntry:
-    def __init__(self):
-        self.fileName = '/'
-        self.attribute = 0x10
-        self.firstCluster = 1
-
-
 class Xtaf:
     def __init__(self, device, offset = 0x130eb0000, size = 0, verbose = False):
         self.verbose = verbose
@@ -135,7 +128,7 @@ class Xtaf:
         
         self.device.defaultOffset = offset + 0x1000 + self.tableSize - self.clusterSize
         
-        self.root = self.getDirectoryEntries(RootEntry())
+        self.root = self.getDirectoryEntries(None)
         
         entry = self.root.get('name.txt')
         if entry and entry.size < 25 : self.volumeName = self.readCluster(entry.firstCluster, entry.size).decode('utf-16')
@@ -156,8 +149,9 @@ class Xtaf:
         return self.device.read(cluster * self.clusterSize, length)
     
     def getDirectoryEntries(self, directoryEntry):
+        if not directoryEntry : return self.__getDirectoryEntries(1)
         if self.verbose : print('get directory entries for {}'.format(directoryEntry.fileName))
-        if not self.isDirectory(directoryEntry) : raise ValueError('{} is not a directory'.format(directoryEntry.fileName))
+        if not directoryEntry.isDirectory() : raise ValueError('{} is not a directory'.format(directoryEntry.fileName))
         return self.__getDirectoryEntries(directoryEntry.firstCluster)
     
     def __getDirectoryEntries(self, cluster):
@@ -167,9 +161,6 @@ class Xtaf:
         directoryEntries = {entry.fileName: entry for entry in [DirectoryEntry(data[index:index + 0x40]) for index in range(0, len(data), 0x40)]}
         directoryEntries.update(self.__getDirectoryEntries(self.table[cluster]))
         return directoryEntries
-    
-    def isDirectory(self, entry):
-        return entry.attribute & 0x10
     
     def getEntry(self, pathName):
         if not pathName.startswith('/') : raise ValueError('path name must start with /')
@@ -194,7 +185,7 @@ class Xtaf:
         return self.__getEntry(directoryEntries, pathNames, fileName)
     
     def readFile(self, fileEntry):
-        if self.isDirectory(fileEntry) : raise ValueError('{} is a directory'.format(fileEntry.fileName))
+        if fileEntry.isDirectory() : raise ValueError('{} is a directory'.format(fileEntry.fileName))
         size, cluster = fileEntry.size, fileEntry.firstCluster
         if size == 0 : return b''
         if size <= self.clusterSize : return self.readCluster(cluster, size)
