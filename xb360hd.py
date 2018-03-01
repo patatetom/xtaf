@@ -170,17 +170,22 @@ class Xtaf:
         pathName = path.abspath(pathName).rstrip('/').lstrip('/')
         if self.verbose : print('get entry for "/{}"'.format(pathName))
         if not pathName : return None
-        # TODO : could be recursive
-        directoryEntries = self.root
         pathName = pathName.split(path.sep)
-        pathName, fileName = pathName[:-1], pathName[-1:].pop()
-        for directory in pathName:
-            try : directoryEntry = directoryEntries[directory]
-            except KeyError : raise KeyError('directory "{}" not found'.format(directory))
-            directoryEntries = self.getDirectoryEntries(directoryEntry)
-        try : entry = directoryEntries[fileName]
-        except KeyError : raise KeyError('entry "{}" not found'.format(fileName))
+        pathNames, fileName = pathName[:-1], pathName[-1:].pop()
+        entry = self.__getEntry(self.root, pathNames, fileName)
         return entry
+    
+    def __getEntry(self, directoryEntries, pathNames, fileName):
+        if not pathNames:
+            try : entry = directoryEntries[fileName]
+            except KeyError : raise KeyError('entry "{}" not found'.format(fileName))
+            return entry
+        directory = pathNames[0]
+        try : directoryEntry = directoryEntries[directory]
+        except KeyError : raise KeyError('directory "{}" not found'.format(directory))
+        directoryEntries = self.getDirectoryEntries(directoryEntry)
+        pathNames = pathNames[1:]
+        return self.__getEntry(directoryEntries, pathNames, fileName)
     
     def readFile(self, fileEntry):
         if self.isDirectory(fileEntry) : raise ValueError('{} is a directory'.format(fileEntry.fileName))
