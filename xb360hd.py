@@ -2,10 +2,12 @@ sectorSize = 0x200
 
 
 from os import path
+path.sep = '/'
+
 from struct import unpack
 from binascii import hexlify
 
-path.sep = '/'
+from datetime import datetime
 
 
 class Xbox360HardDrive:
@@ -65,6 +67,7 @@ class DirectoryEntry:
             try : fileName = fileName.rstrip(b'\xff').decode('ascii')
             except UnicodeDecodeError : fileName = hexlify(fileName.rstrip(b'\xff')).decode('ascii')
             self.fileName = '<DELETED:{}>'.format(fileName)
+            #self.size = 0
         
         self.creationDate = self.__convert(cDate, cTime)
         self.modificationDate = self.__convert(mDate, mTime)
@@ -73,25 +76,29 @@ class DirectoryEntry:
         string  = 'file name: {}, '.format(self.fileName)
         string += 'attribute: {}, '.format(self.attribute)
         string += 'size: {}, '.format(self.size)
-        string += 'creation date: {}, '.format(self.creationDate)
-        string += 'modification date: {}, '.format(self.modificationDate)
+        string += 'creation date: {}, '.format(self.creationDate.strftime('%Y%m%d%H%M%S'))
+        string += 'modification date: {}, '.format(self.modificationDate.strftime('%Y%m%d%H%M%S'))
         string += 'first cluster: {}'.format(self.firstCluster)
         return '({})'.format(string)
     
     def __convert(self, fatDate, fatTime):
-        return int(
-            '{}{:02d}{:02d}{:02d}{:02d}{:02d}'.format(
-                (1980 + (fatDate >> 9)),
-                ((fatDate >> 5) & 0x0f),
-                (fatDate & 0x1f),
-                (fatTime >> 11),
-                ((fatTime >> 5) & 0x3f),
-                ((fatTime & 0x1f) * 2)
-            )
+        return datetime(
+            (1980 + (fatDate >> 9)),
+            ((fatDate >> 5) & 0x0f),
+            (fatDate & 0x1f),
+            (fatTime >> 11),
+            ((fatTime >> 5) & 0x3f),
+            ((fatTime & 0x1f) * 2)
         )
 
 
-class Fatx:
+class RootEntry:
+    def __init__(self):
+        self.attribute = 0x10
+        self.firstCluster = 1
+
+
+class Xtaf:
     def __init__(self, device, offset = 0x130eb0000, size = 0, verbose = False):
         self.verbose = verbose
         self.device = Xbox360HardDrive(device, verbose)
@@ -121,7 +128,7 @@ class Fatx:
         
         self.device.defaultOffset = offset + 0x1000 + self.tableSize - self.clusterSize
         
-        self.root = self.getDirectoryEntries(1)
+        self.root = self.getDirectoryEntries(RootEntry())
         
         entry = self.root.get('name.txt')
         if entry and entry.size < 25 : self.volumeName = self.readCluster(entry.firstCluster, entry.size).decode('utf-16')
@@ -137,49 +144,36 @@ class Fatx:
         return '({})'.format(string)
     
     def readCluster(self, cluster, length = 0):
+        if cluster < 1 or cluster > self.tableSize : raise ValueError('unauthorized cluster value ({})'.format(cluster))
         if self.verbose : print('{} cluster {}'.format(length and 'reading {} bytes at'.format(length) or 'reading', cluster))
         return self.device.read(cluster * self.clusterSize, length)
     
-    def getDirectoryEntries(self, cluster):
+    def getDirectoryEntries(self, directoryEntry):
+        if not self.isDirectory(directoryEntry) : raise ValueError('{} is not a directory'.format(directoryEntry.fileName))
         # TODO : can be more than one cluster
-        if cluster < 1 or cluster > self.tableSize : raise ValueError('unauthorized value ({}) for cluster'.format(cluster))
-        data = self.readCluster(cluster).rstrip(b'\xff' * 0x40)
+        data = self.readCluster(directoryEntry.firstCluster).rstrip(b'\xff' * 0x40)
         if len(data) % 0x40 : raise ValueError('wrong directory entries length ({})'.format(len(data)))
         return {entry.fileName: entry for entry in [DirectoryEntry(data[index:index + 0x40]) for index in range(0, len(data), 0x40)]}
     
     def isDirectory(self, entry):
         return entry.attribute & 0x10
     
-    def getPathEntries(self, pathName):
+    def getEntry(self, pathName):
         if not pathName.startswith('/') : raise ValueError('path name must start with /')
         pathName = path.abspath(pathName).rstrip('/').lstrip('/')
-        if self.verbose : print('get entries for {}'.format(pathName or '/'))
-        if not pathName : return self.root
+        if self.verbose : print('get entry for "/{}"'.format(pathName))
+        if not pathName : return None
         # TODO : could be recursive
         directoryEntries = self.root
-        for directory in pathName.split(path.sep):
-            try : entry = directoryEntries[directory]
-            except KeyError : raise KeyError('directory {} not found'.format(directory))
-            if not self.isDirectory(entry) : raise ValueError('{} is not a directory'.format(directory))
-            directoryEntries = self.getDirectoryEntries(entry.firstCluster)
-        return directoryEntries
-    
-    def getFileEntry(self, fileName):
-        if not fileName.startswith('/') : raise ValueError('file name must start with /')
-        if self.verbose : print('get entry for {}'.format(fileName))
-        pathName, fileName = path.split(path.abspath(fileName))
-        directoryEntries = self.getPathEntries(pathName)
-        if self.verbose : print('get entry for {}'.format(fileName))
-        try : fileEntry = directoryEntries[fileName]
-        except KeyError : raise KeyError('file {} not found'.format(fileName))
-        if self.isDirectory(fileEntry) : raise ValueError('{} is a directory'.format(fileName))
-        return fileEntry
-    
-    def getDirectories(self, directoryEntries):
-        return {fileName: entry for fileName, entry in directoryEntries.items() if self.isDirectory(entry)}
-    
-    def getFiles(self, directoryEntries):
-        return {fileName: entry for fileName, entry in directoryEntries.items() if not self.isDirectory(entry)}
+        pathName = pathName.split(path.sep)
+        pathName, fileName = pathName[:-1], pathName[-1:].pop()
+        for directory in pathName:
+            try : directoryEntry = directoryEntries[directory]
+            except KeyError : raise KeyError('directory "{}" not found'.format(directory))
+            directoryEntries = self.getDirectoryEntries(directoryEntry)
+        try : entry = directoryEntries[fileName]
+        except KeyError : raise KeyError('entry "{}" not found'.format(fileName))
+        return entry
     
     def readFile(self, fileEntry):
         if self.isDirectory(fileEntry) : raise ValueError('{} is a directory'.format(fileEntry.fileName))
