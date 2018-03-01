@@ -81,6 +81,12 @@ class DirectoryEntry:
         string += 'first cluster: {}'.format(self.firstCluster)
         return '({})'.format(string)
     
+    def isDirectory(self):
+        return self.attribute & 0x10 and True or False
+    
+    def isFile(self):
+        return not self.isDirectory()
+    
     def __convert(self, fatDate, fatTime):
         return datetime(
             (1980 + (fatDate >> 9)),
