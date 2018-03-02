@@ -47,4 +47,7 @@ class XtafFuse(Operations):
 
     def readdir(self, path, fh):
         pathEntries = (path == '/') and self.xtaf.root or self.xtaf.getDirectoryEntries(self.xtaf.getEntry(path))
-        for entry in ('.', '..') + list(pathEntries.keys()) : yield entry
+        return ('.', '..') + tuple(pathEntries.keys())
+    
+    def read(self, path, size, offset, fh):
+        for data in self.xtaf.readFile(self.xtaf.getEntry(path)) : yield data
