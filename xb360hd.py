@@ -208,7 +208,13 @@ class Xtaf:
     
     def readFile(self, fileEntry):
         if fileEntry.isDirectory() : raise ValueError('{} is a directory'.format(fileEntry.fileName))
-        size, cluster = fileEntry.size, fileEntry.firstCluster
-        if size == 0 : return b''
-        if size <= self.clusterSize : return self.readCluster(cluster, size)
-        return b'TODO!'
+        if fileEntry.size == 0 : yield b''
+        elif not fileEntry.size > self.clusterSize : yield self.readCluster(fileEntry.firstCluster, fileEntry.size)
+        else:
+            clusters, cluster = (), fileEntry.firstCluster
+            while not cluster > self.tableSize:
+                clusters += (cluster,)
+                cluster = self.table[cluster]
+            lastCluster, clusters = clusters[-1], clusters[:-1]
+            for cluster in clusters : yield self.readCluster(cluster)
+            yield self.readCluster(lastCluster)[:fileEntry.size % self.clusterSize]
