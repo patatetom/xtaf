@@ -1,13 +1,14 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 
 from xb360hd import Xtaf
 from fuse import FUSE, FuseOSError, Operations
 from time import localtime, mktime
 from os import getgid, getuid
 
+
 class XtafFuse(Operations):
     def __init__(self, device, offset = 0x130eb0000, size = 0, verbose = False):
-        self.xtaf = Xtaf(device, offset = 0x130eb0000, size = 0, verbose = False)
+        self.xtaf = Xtaf(device, offset, size, verbose)
         self.ctime = mktime(localtime())
         self.uid = getuid()
         self.gid = getgid()
@@ -46,4 +47,4 @@ class XtafFuse(Operations):
 
     def readdir(self, path, fh):
         pathEntries = (path == '/') and self.xtaf.root or self.xtaf.getDirectoryEntries(self.xtaf.getEntry(path))
-        for entry in ['.', '..'] + list(pathEntries.keys()) : yield entry
+        for entry in ('.', '..') + list(pathEntries.keys()) : yield entry
