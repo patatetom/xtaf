@@ -1,25 +1,23 @@
-sectorSize = 0x200
-
-
 from os import path
-path.sep = '/'
-
 from struct import unpack
 from binascii import hexlify
-
 from datetime import datetime
+
+sectorSize = 0x200
 
 
 class Xbox360HardDrive:
     """
-    Offset        Length          Information                     Format
-    0x2000        0x204-0x80000   Security Sector                 Binary
-    0x80000       0x80000000      System Cache                    SFCX (Secure File Cache for Xbox)
-    0x80080000    0xa0e30000      Game Cache                      SFCX (Secure File Cache for Xbox)
-    0x10c080000   0xce30000       SysExt                          FATX ("Sub"-Partition)
-    0x118eb0000   0x8000000       SysExt2                         FATX ("Sub"-Partition)
-    0x120eb0000   0x10000000      Xbox 1 Backwards Compatibility  FATX
-    0x130eb0000   end of drive    Data                            FATX
+    Security Sector at offset 0x2000
+    Offset   Size           Type                Information
+    0x0      0x14           ascii string        serial number
+    0x14     0x8            ascii string        firmware revision
+    0x1c     0x28           ascii string        model number
+    0x44     0x14           bytes               MS logo hash
+    0x58     0x4            unsigned int (LE)   number of sectors on drive
+    0x5c     0x100          bytes               RSA signature
+    0x00     0x4            signed int          MS logo Size
+    0x04     MS logo size   image PNG           MS logo
     """
     def __init__(self, device, verbose = False):
         self.verbose = verbose
@@ -58,6 +56,20 @@ class Xbox360HardDrive:
 
 
 class DirectoryEntry:
+    """
+    Offset   Size   Type             Description
+    0x0      0x1    byte             file name length (0xe5 for deleted file)
+    0x1      0x1    byte             file attributes
+    0x2      0x2a   ascii string     padded file name (0x00/0xff)
+    0x2c     0x4    unsigned int     first cluster of file (0x0 for empty file)
+    0x30     0x4    unsigned int     file size
+    0x34     0x2    unsigned short   creation date
+    0x36     0x2    unsigned short   creation time
+    0x38     0x2    unsigned short   write date
+    0x3a     0x2    unsigned short   write time
+    0x3c     0x2    unsigned short   access date
+    0x3e     0x2    unsigned short   access time
+    """
     def __init__(self, rawEntry):
         unpacked = unpack('>BB42sIIHHHH4x', rawEntry)
         self.fileNameLength, self.attribute, fileName, self.firstCluster, self.size, cDate, cTime, mDate, mTime = unpacked
@@ -99,6 +111,16 @@ class DirectoryEntry:
 
 
 class Xtaf:
+    """
+    Offset        Size            Information            Format
+    0x2000        0x204-0x80000   security sector        binary
+    0x80000       0x80000000      system cache           SFCX (Secure File Cache for Xbox)
+    0x80080000    0xa0e30000      game cache             SFCX (Secure File Cache for Xbox)
+    0x10c080000   0xce30000       system extend 1        XTAF
+    0x118eb0000   0x8000000       system extend 2        XTAF
+    0x120eb0000   0x10000000      Xbox 1 compatibility   XTAF
+    0x130eb0000   end of drive    data                   XTAF
+    """
     def __init__(self, device, offset = 0x130eb0000, size = 0, verbose = False):
         self.verbose = verbose
         self.device = Xbox360HardDrive(device, verbose)
