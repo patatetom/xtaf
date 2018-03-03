@@ -150,6 +150,8 @@ class Xtaf:
         
         self.device.defaultOffset = offset + 0x1000 + self.tableSize - self.clusterSize
         
+        self.cacheEntry, self.cacheDirectoryEntries = {}, {}
+        
         self.root = self.getDirectoryEntries(None)
         
         entry = self.root.get('name.txt')
@@ -178,10 +180,13 @@ class Xtaf:
     
     def __getDirectoryEntries(self, cluster):
         if cluster > self.tableSize : return {}
+        cached = self.cacheDirectoryEntries.get(cluster)
+        if cached : return cached
         data = self.readCluster(cluster).rstrip(b'\xff' * 0x40)
         if len(data) % 0x40 : raise ValueError('wrong directory entries length ({})'.format(len(data)))
         directoryEntries = {entry.fileName: entry for entry in [DirectoryEntry(data[index:index + 0x40]) for index in range(0, len(data), 0x40)]}
         directoryEntries.update(self.__getDirectoryEntries(self.table[cluster]))
+        self.cacheDirectoryEntries[cluster] = directoryEntries
         return directoryEntries
     
     def getEntry(self, pathName):
@@ -189,9 +194,12 @@ class Xtaf:
         pathName = path.abspath(pathName).rstrip('/').lstrip('/')
         if self.verbose : print('get entry for "/{}"'.format(pathName))
         if not pathName : return None
-        pathName = pathName.split(path.sep)
-        pathNames, fileName = pathName[:-1], pathName[-1:].pop()
+        cached = self.cacheEntry.get(pathName)
+        if cached : return cached
+        elements = pathName.split(path.sep)
+        pathNames, fileName = elements[:-1], elements[-1:].pop()
         entry = self.__getEntry(self.root, pathNames, fileName)
+        self.cacheEntry[pathName] = entry
         return entry
     
     def __getEntry(self, directoryEntries, pathNames, fileName):
