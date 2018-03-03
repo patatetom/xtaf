@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 from xb360hd import Xtaf
 from fuse import FUSE, FuseOSError, Operations
 from time import localtime, mktime
@@ -16,7 +14,7 @@ class XtafFuse(Operations):
     def access(self, path, mode):
         pass
 
-    def getattr(self, path, fh=None):
+    def getattr(self, path, fh):
         stat = {
             'st_mode': 0o40555,
             'st_nlink': 2,
@@ -50,4 +48,11 @@ class XtafFuse(Operations):
         return ('.', '..') + tuple(pathEntries.keys())
     
     def read(self, path, size, offset, fh):
-        for data in self.xtaf.readFile(self.xtaf.getEntry(path)) : yield data
+        data = b''
+        if not size : return data
+        clusters = self.xtaf.getClusters(self.xtaf.getEntry(path))
+        start = offset//self.xtaf.clusterSize
+        stop = start + (size//self.xtaf.clusterSize or 1)
+        clusters = clusters[start:stop]
+        for cluster in clusters : data += self.xtaf.readCluster(cluster)
+        return data[:size]
