@@ -140,7 +140,7 @@ class Xtaf:
         
         self.tableEntry = ((self.size / self.clusterSize) < 0xfff0) and 0x2 or 0x4
         
-        self.tableSize = int(self.size / self.clusterSize * self.tableEntry) + 0x1000
+        self.tableSize = (self.size // self.clusterSize * self.tableEntry) + 0x1000
         if self.tableSize % 0x1000 : self.tableSize -= self.tableSize % 0x1000
         
         data = self.device.read(0x1000, self.tableSize).rstrip(b'\x00' * self.tableEntry)
@@ -214,14 +214,18 @@ class Xtaf:
         pathNames = pathNames[1:]
         return self.__getEntry(directoryEntries, pathNames, fileName)
     
+    def getClusters(self, fileEntry):
+        clusters, cluster = (), fileEntry.firstCluster
+        while not cluster > self.tableSize:
+            clusters += (cluster,)
+            cluster = self.table[cluster]
+        return clusters
+    
     def readFile(self, fileEntry):
         if fileEntry.isDirectory() : raise ValueError('{} is a directory'.format(fileEntry.fileName))
         if fileEntry.size == 0 : yield b''
         else:
-            clusters, cluster = (), fileEntry.firstCluster
-            while not cluster > self.tableSize:
-                clusters += (cluster,)
-                cluster = self.table[cluster]
+            clusters = self.getClusters(fileEntry)
             lastCluster, clusters = clusters[-1], clusters[:-1]
             for cluster in clusters : yield self.readCluster(cluster)
             yield self.readCluster(lastCluster)[:fileEntry.size % self.clusterSize]
