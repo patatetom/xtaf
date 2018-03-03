@@ -78,6 +78,7 @@ class DirectoryEntry:
         else:
             try : fileName = fileName.rstrip(b'\xff').decode('ascii')
             except UnicodeDecodeError : fileName = hexlify(fileName.rstrip(b'\xff')).decode('ascii')
+            # the file name could start with a dot in order to be hidden during a normal display...
             self.fileName = '<DELETED:{}>'.format(fileName)
             self.size = 0
         

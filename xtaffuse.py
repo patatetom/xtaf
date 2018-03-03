@@ -11,9 +11,6 @@ class XtafFuse(Operations):
         self.uid = getuid()
         self.gid = getgid()
     
-    def access(self, path, mode):
-        pass
-
     def getattr(self, path, fh):
         stat = {
             'st_mode': 0o40555,
@@ -35,12 +32,12 @@ class XtafFuse(Operations):
             'st_atime': max(ctime, mtime)
         })
         if entry.isDirectory() : return stat
-        # make the <DELETED:> file inaccessible in addition to its null size...
         stat.update({
             'st_mode': 0o100444,
             'st_nlink': 1,
             'st_size': entry.size
         })
+        if entry.fileName.startswith('<DELETED:') : stat.update({'st_mode': 0o100000})
         return stat
 
     def readdir(self, path, fh):
@@ -50,6 +47,7 @@ class XtafFuse(Operations):
     def read(self, path, size, offset, fh):
         data = b''
         if not size : return data
+        if '/<DELETED:' in path : raise FuseOSError(1)
         clusters = self.xtaf.getClusters(self.xtaf.getEntry(path))
         start = offset//self.xtaf.clusterSize
         stop = start + (size//self.xtaf.clusterSize or 1)
