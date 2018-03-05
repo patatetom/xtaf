@@ -26,7 +26,7 @@ class Xbox360HardDrive:
         self.defaultOffset = 0
         self.defaultLength = sectorSize
         
-        if self.read(0x2204, 0x8) == b'\x89PNG\r\n\x1a\n' :
+        if self.read(0x800, 0x4) == b'Josh' and self.read(0x2204, 0x8) == b'\x89PNG\r\n\x1a\n':
             unpacked = unpack('<20s8s40s20xI', self.read(0x2000, 0x5c))
             self.serialNumber, self.firmwareRevision, self.modelNumber, sectorsNumber = unpacked
             
