@@ -1,6 +1,10 @@
 # xtaf
 Xbox 360 file system
 
+
+## xb360hd module
+this module is used by `xtaffuse` module to read a xtaf partition
+
 ```
 Python 3.6.4 (default, Jan  5 2018, 02:35:40) 
 [GCC 7.2.1 20171224] on linux
