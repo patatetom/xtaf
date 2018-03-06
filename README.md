@@ -15,6 +15,26 @@ Type "help", "copyright", "credits" or "license" for more information.
 >>> # Xbox 360 hard drive is accessible from /dev/loop0
 >>> dev = '/dev/loop0'
 
+>>> # open data partition by default
+>>> xtaf = xtaffuse.XtafFuse(dev)
+>>> xtaf.xtaf
+(id: 2068792064, size: 244943675392, cluster size: 16384, table entry: 4, table size: 59801600,
+root cluster: 1, volume name: Disque dur)
+>>> xtaf.xtaf.device
+(name: /dev/loop0, serial number: 6VCT9Z2W, firmware revision: 0002CE02, model number: ST9250315AS,
+size: 250059350016)
+
+>>> # test readdir and getattr functions
+>>> xtaf.readdir('/', 0)
+('.', '..', 'name.txt', 'Cache', 'Content')
+>>> xtaf.readdir('/Content', 0)
+('.', '..', 'E00005538DC276AE', '0000000000000000')
+>>> xtaf.getattr('/', 0)
+{'st_mode': 16749, 'st_nlink': 2, 'st_gid': 1000, 'st_uid': 1000, 'st_size': 4096, 'st_ctime':
+1520327391.0, 'st_mtime': 1520327391.0, 'st_atime': 1520327391.0}
+>>> xtaf.getattr('/name.txt', 0)
+{'st_mode': 33060, 'st_nlink': 1, 'st_gid': 1000, 'st_uid': 1000, 'st_size': 22, 'st_ctime':
+1132660302.0, 'st_mtime': 1132660302.0, 'st_atime': 1132660302.0}
 ```
 
 
