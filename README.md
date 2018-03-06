@@ -35,6 +35,75 @@ size: 250059350016)
 >>> xtaf.getattr('/name.txt', 0)
 {'st_mode': 33060, 'st_nlink': 1, 'st_gid': 1000, 'st_uid': 1000, 'st_size': 22, 'st_ctime':
 1132660302.0, 'st_mtime': 1132660302.0, 'st_atime': 1132660302.0}
+
+>>> # make the partition accessible through /tmp/xbox
+>>> fuser = xtaffuse.FUSE(xtaf, '/tmp/xbox', foreground=True, nothreads=True, debug=True)
+FUSE library version: 2.9.7
+nullpath_ok: 0
+nopath: 0
+utime_omit_ok: 0
+unique: 1, opcode: INIT (26), nodeid: 0, insize: 56, pid: 0
+INIT: 7.26
+flags=0x001ffffb
+max_readahead=0x00020000
+   INIT: 7.19
+   flags=0x00000011
+   max_readahead=0x00020000
+   max_write=0x00020000
+   max_background=0
+   congestion_threshold=0
+   unique: 1, success, outsize: 40
+```
+and in another terminal
+```
+$ ll -gG /tmp/xbox/
+total 0
+dr-xr-xr-x 2 4096 22 nov.   2005 Cache
+dr-xr-xr-x 2 4096 22 nov.   2005 Content
+-r--r--r-- 1   22 22 nov.   2005 name.txt
+
+$ tree /tmp/xbox/
+/tmp/xbox/
+├── Cache
+│   ├── NB_E0005AE6S4TLE.0000002000000
+│   ├── TK_080J90B_A35H6O7QL7FVA.03KR2R4PMB8C2
+│   ├── TK_1CKHGOD_7UDM61KKOO9UV.03KR2R4PVDFFI
+│   ├── TK_2NHCVSM_BU78383MFBO42.03KR2R4PR916I
+│   ├── VC_17SA802_BQFIBU8CS8UT5.03KR2R5IH7L72
+│   └── XT_000007V_FK000001H7RBB.03KR2R5C4LKI2
+├── Content
+│   ├── 0000000000000000
+│   │   └── FFFE07DF
+│   │       └── 00040000
+│   │           ├── <DELETED:XlfsUploadCache.dat>
+│   │           └── ContentCache.pkg
+│   └── E00005538DC276AE
+│       ├── 454109C3
+│       │   └── 00000001
+│       │       ├── Career 20051122140822
+│       │       ├── Career 20051122143225
+│       │       ├── Career 20051122143331
+│       │       └── Settings 20051122143332
+│       └── FFFE07D1
+│           └── 00010000
+│               └── E00005538DC276AE
+└── name.txt
+10 directories, 14 files
+
+$ iconv -f utf-16 /tmp/xbox/name.txt
+Disque dur
+
+$ xxd /tmp/xbox/Content/E00005538DC276AE/454109C3/00000001/Settings\ 20051122143332 | head
+00000000: 434f 4e20 01a8 576c 276a e558 3835 3334  CON ..Wl'j.X8534
+00000010: 3239 2d30 3031 0000 0000 0000 0000 0002  29-001..........
+00000020: 3037 2d31 392d 3131 0001 0001 31a0 b991  07-19-11....1...
+00000030: 4e02 1ca9 0eb1 782c 1c81 60ea b0b5 d29d  N.....x,..`.....
+00000040: 420d fb43 89a7 ad2c 871d 2aad 9916 8498  B..C...,..*.....
+00000050: f89d 7c2d b6a0 892c ee57 909e f0f5 3259  ..|-...,.W....2Y
+00000060: 939e 9e47 9d28 27f3 cb64 67a1 51fa d309  ...G.('..dg.Q...
+00000070: ac86 1253 9aad 0aa6 9558 61ef 4aba bdd1  ...S.....Xa.J...
+00000080: e167 cfc3 0a72 dc89 2db6 b93d b0be df85  .g...r..-..=....
+00000090: 3699 5ca3 9711 56b1 5f62 d6bf c415 5961  6.\...V._b....Ya
 ```
 
 
