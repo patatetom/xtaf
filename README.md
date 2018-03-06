@@ -2,6 +2,22 @@
 Xbox 360 file system
 
 
+## xtaffuse module
+this module use `xb360hd` module to read a xtaf partition
+
+```
+Python 3.6.4 (default, Jan  5 2018, 02:35:40) 
+[GCC 7.2.1 20171224] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> # import module
+>>> import xtaffuse
+
+>>> # Xbox 360 hard drive is accessible from /dev/loop0
+>>> dev = '/dev/loop0'
+
+```
+
+
 ## xb360hd module
 this module is used by `xtaffuse` module to read a xtaf partition
 
@@ -9,6 +25,7 @@ this module is used by `xtaffuse` module to read a xtaf partition
 Python 3.6.4 (default, Jan  5 2018, 02:35:40) 
 [GCC 7.2.1 20171224] on linux
 Type "help", "copyright", "credits" or "license" for more information.
+>>> # import module
 >>> import xb360hd
 
 >>> # Xbox 360 hard drive is accessible from /dev/loop0
