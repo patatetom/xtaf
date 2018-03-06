@@ -94,6 +94,6 @@ get entry for "/online/system.online.manifest.0D1C80138EC7534F"
 reading cluster 3
 reading 16384 bytes at offset 0x118ebe000
 b'XMNPV\xdf\'7.\x1a~5\xdd\xfa\x93\xb4\x8b\x94\x02\xd1\x85*\x13
-...
+…
 NewLiveSignup.xex\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
 ```
