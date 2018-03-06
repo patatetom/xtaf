@@ -56,6 +56,18 @@ max_readahead=0x00020000
 ```
 and in another terminal
 ```
+$ ./isXb360Hd /dev/loop0 -v && echo OK || echo KO
+device: /dev/loop0
+serial number: 6VCT9Z2W
+firmware revision: 0002CE02
+model number: ST9250315AS
+size: 488397168 bytes
+xtaf at 0x10c080000: ok
+xtaf at 0x118eb0000: ok
+xtaf at 0x120eb0000: ok
+xtaf at 0x130eb0000: ok
+OK
+
 $ mount | grep /tmp/xbox
 XtafFuse on /tmp/xbox type fuse (rw,nosuid,nodev,relatime,user_id=1000,group_id=1000)
 
