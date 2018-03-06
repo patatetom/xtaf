@@ -47,7 +47,7 @@ reading 16384 bytes at offset 0x118eb6000
 {'online': (filename: online, attribute: 16, size: 0, creation date: 20120105170952,
 modification date: 20120105170952, first cluster: 2)}
 
->>> # looking in online directory
+>>> # play with online directory
 >>> xtaf.getEntry('online')
 Traceback (most recent call last):
   File "<stdin>", line 1, in <module>
@@ -78,4 +78,18 @@ modification date: 20161222095904, first cluster: 1175), '<DELETED:system.online
 '<DELETED:system.online.manifest.05675B3DBE8B7702>': (file name:
 <DELETED:system.online.manifest.05675B3DBE8B7702>, attribute: 0, size: 0, creation date: 20121127181532,
 modification date: 20121127181532, first cluster: 1454)}
+
+>>> # play with system.online.manifest.0D1C80138EC7534F file
+>>> xtaf.getEntry('/online/system.online.manifest.0D1C80138EC7534F').isDirectory()
+get entry for "/online/system.online.manifest.0D1C80138EC7534F"
+False
+>>> for data in xtaf.readFile(xtaf.getEntry('/online/system.online.manifest.0D1C80138EC7534F')):
+...  print(data)
+... 
+get entry for "/online/system.online.manifest.0D1C80138EC7534F"
+reading cluster 3
+reading 16384 bytes at offset 0x118ebe000
+b'XMNPV\xdf\'7.\x1a~5\xdd\xfa\x93\xb4\x8b\x94\x02\xd1\x85*\x13
+...
+NewLiveSignup.xex\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
 ```
