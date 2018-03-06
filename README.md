@@ -56,7 +56,8 @@ Traceback (most recent call last):
 ValueError: path name must start with /
 >>> xtaf.getEntry('/online')
 get entry for "/online"
-(file name: online, attribute: 16, size: 0, creation date: 20120105170952, modification date: 20120105170952, first cluster: 2)
+(file name: online, attribute: 16, size: 0, creation date: 20120105170952, modification date: 20120105170952,
+first cluster: 2)
 >>> xtaf.getEntry('/online').isDirectory()
 get entry for "/online"
 True
@@ -65,9 +66,10 @@ get entry for "/online"
 get directory entries for online
 reading cluster 2
 reading 16384 bytes at offset 0x118eba000
-{'system.online.manifest.0D1C80138EC7534F': (file name: system.online.manifest.0D1C80138EC7534F, attribute: 0, size: 6580,
-creation date: 20171121145842, modification date: 20171121145842, first cluster: 3), '20446700': (file name: 20446700,
-attribute: 16, size: 0, creation date: 20171121145940, modification date: 20171121145940, first cluster: 4),
+{'system.online.manifest.0D1C80138EC7534F': (file name: system.online.manifest.0D1C80138EC7534F, attribute: 0,
+size: 6580, creation date: 20171121145842, modification date: 20171121145842, first cluster: 3), '20446700':
+(file name: 20446700, attribute: 16, size: 0, creation date: 20171121145940, modification date: 20171121145940,
+first cluster: 4),
 '<DELETED:system.online.manifest.0CC449508B377299>': (file name: <DELETED:system.online.manifest.0CC449508B377299>,
 attribute: 0, size: 0, creation date: 20161222095904, modification date: 20161222095904, first cluster: 1175),
 '<DELETED:system.online.manifest.082EED04ABC0B778>': (file name: <DELETED:system.online.manifest.082EED04ABC0B778>,
