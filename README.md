@@ -56,6 +56,9 @@ max_readahead=0x00020000
 ```
 and in another terminal
 ```
+$ mount | grep /tmp/xbox
+XtafFuse on /tmp/xbox type fuse (rw,nosuid,nodev,relatime,user_id=1000,group_id=1000)
+
 $ ll -gG /tmp/xbox/
 total 0
 dr-xr-xr-x 2 4096 22 nov.   2005 Cache
