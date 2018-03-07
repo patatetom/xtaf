@@ -48,9 +48,11 @@ class XtafFuse(Operations):
         data = b''
         if not size : return data
         if '/(DELETED:' in path : raise FuseOSError(1)
-        clusters = self.xtaf.getClusters(self.xtaf.getEntry(path))
-        start = offset//self.xtaf.clusterSize
-        stop = start + (size//self.xtaf.clusterSize or 1)
+        entry = self.xtaf.getEntry(path)
+        if offset >= entry.size : return data
+        clusters = self.xtaf.getClusters(entry)
+        start = offset // self.xtaf.clusterSize
+        stop = start + (size // self.xtaf.clusterSize) + (size % self.xtaf.clusterSize > 0)
         clusters = clusters[start:stop]
         for cluster in clusters : data += self.xtaf.readCluster(cluster)
         return data[:size]
