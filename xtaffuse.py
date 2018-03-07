@@ -37,7 +37,7 @@ class XtafFuse(Operations):
             'st_nlink': 1,
             'st_size': entry.size
         })
-        if entry.fileName.startswith('<DELETED:') : stat.update({'st_mode': 0o100000})
+        if entry.fileName.startswith('(DELETED:') : stat.update({'st_mode': 0o100000})
         return stat
 
     def readdir(self, path, fh):
@@ -47,7 +47,7 @@ class XtafFuse(Operations):
     def read(self, path, size, offset, fh):
         data = b''
         if not size : return data
-        if '/<DELETED:' in path : raise FuseOSError(1)
+        if '/(DELETED:' in path : raise FuseOSError(1)
         clusters = self.xtaf.getClusters(self.xtaf.getEntry(path))
         start = offset//self.xtaf.clusterSize
         stop = start + (size//self.xtaf.clusterSize or 1)
