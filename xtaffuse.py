@@ -10,6 +10,7 @@ class XtafFuse(Operations):
         self.ctime = mktime(localtime())
         self.uid = getuid()
         self.gid = getgid()
+        self.cacheClusters = {}
     
     def getattr(self, path, fh):
         stat = {
@@ -50,7 +51,10 @@ class XtafFuse(Operations):
         if '/(DELETED:' in path : raise FuseOSError(1)
         entry = self.xtaf.getEntry(path)
         if offset >= entry.size : return data
-        clusters = self.xtaf.getClusters(entry)
+        clusters = self.cacheClusters.get(entry)
+        if not clusters:
+            clusters = self.xtaf.getClusters(entry)
+            self.cacheClusters[entry] = clusters
         start = offset // self.xtaf.clusterSize
         stop = start + (size // self.xtaf.clusterSize) + (size % self.xtaf.clusterSize > 0)
         clusters = clusters[start:stop]
