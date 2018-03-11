@@ -123,7 +123,7 @@ $ xxd /tmp/xbox/Content/E00005538DC276AE/454109C3/00000001/Settings\ 20051122143
 
 
 ## xb360hd module
-this module is used by `xtaffuse` module to read a xtaf partition
+this module is used by `xtaffuse` module to read a xtaf partition : you can use it to debug the module or try to restore a deleted file.
 
 ```
 Python 3.6.4 (default, Jan  5 2018, 02:35:40) 
